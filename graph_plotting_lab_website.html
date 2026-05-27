@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab Graph Plotter</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #eef2f7;
+      color: #1f2937;
+      padding: 20px;
+    }
+
+    .app {
+      max-width: 1400px;
+      margin: auto;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: white;
+      padding: 24px;
+      border-radius: 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    }
+
+    header h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 370px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel, .graph-card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    .panel {
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      position: sticky;
+      top: 20px;
+    }
+
+    .section {
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .section h2 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: #111827;
+    }
+
+    label {
+      display: block;
+      font-size: 0.86rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.94rem;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.16);
+    }
+
+    textarea {
+      min-height: 130px;
+      resize: vertical;
+      font-family: Consolas, monospace;
+      line-height: 1.45;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .field {
+      margin-bottom: 10px;
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      font-weight: 800;
+      transition: 0.2s;
+    }
+
+    .primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .primary:hover {
+      background: #1d4ed8;
+    }
+
+    .secondary {
+      background: #e0e7ff;
+      color: #1e3a8a;
+    }
+
+    .secondary:hover {
+      background: #c7d2fe;
+    }
+
+    .danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .danger:hover {
+      background: #fecaca;
+    }
+
+    .graph-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .graph-topbar h2 {
+      color: #111827;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      overflow: auto;
+      border: 1px solid #d1d5db;
+      border-radius: 16px;
+      background: #f8fafc;
+      padding: 14px;
+    }
+
+    canvas {
+      display: block;
+      background: white;
+      border-radius: 8px;
+      margin: auto;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+    }
+
+    .status {
+      margin-top: 12px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      color: #374151;
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .checkbox-row input {
+      width: auto;
+    }
+
+    .checkbox-row label {
+      margin-bottom: 0;
+      font-weight: 600;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        position: static;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Lab Graph Plotter</h1>
+      <p>Create physics and mathematics lab graphs on custom graph paper. Enter X-Y values, choose ranges, select mm or semilog paper, customize size and colors, then download the plotted graph.</p>
+    </header>
+
+    <main class="layout">
+      <aside class="panel">
+        <div class="section">
+          <h2>1. Enter X and Y Values</h2>
+          <div class="field">
+            <label for="dataInput">Data points</label>
+            <textarea id="dataInput">0,0
+1,2
+2,4
+3,9
+4,16
+5,25</textarea>
+            <p class="hint">Write one point per line as x,y. Example: 2.5, 7.8</p>
+          </div>
+          <div class="btn-row">
+            <button class="secondary" onclick="loadSample('linear')">Linear Sample</button>
+            <button class="secondary" onclick="loadSample('physics')">Physics Sample</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>2. Axis Range</h2>
+          <div class="grid-2">
+            <div>
+              <label for="xMin">X Min</label>
+              <input id="xMin" type="number" value="0" step="any" />
+            </div>
+            <div>
+              <label for="xMax">X Max</label>
+              <input id="xMax" type="number" value="5" step="any" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label for="yMin">Y Min</label>
+              <input id="yMin" type="number" value="0" step="any" />
+            </div>
+            <div>
+              <label for="yMax">Y Max</label>
+              <input id="yMax" type="number" value="25" step="any" />
+            </div>
+          </div>
+          <div class="checkbox-row">
+            <input id="autoRange" type="checkbox" />
+            <label for="autoRange">Auto range from data</label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>3. Graph Paper Style</h2>
+          <div class="field">
+            <label for="paperStyle">Paper type</label>
+            <select id="paperStyle">
+              <option value="mm">Millimeter graph paper</option>
+              <option value="semilog3">Semilog graph paper - 3 cycle</option>
+              <option value="semilog5">Semilog graph paper - 5 cycle</option>
+              <option value="plain">Plain graph</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="plotMode">Plot mode</label>
+            <select id="plotMode">
+              <option value="pointsLine">Points + joining line</option>
+              <option value="points">Points only</option>
+              <option value="line">Line only</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pointSize">Point size</label>
+            <input id="pointSize" type="number" value="5" min="1" max="20" />
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>4. Size and Color</h2>
+          <div class="grid-2">
+            <div>
+              <label for="paperWidth">Width px</label>
+              <input id="paperWidth" type="number" value="900" min="400" max="3000" />
+            </div>
+            <div>
+              <label for="paperHeight">Height px</label>
+              <input id="paperHeight" type="number" value="650" min="300" max="2500" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label for="paperColor">Paper color</label>
+              <input id="paperColor" type="color" value="#ffffff" />
+            </div>
+            <div>
+              <label for="gridColor">Grid color</label>
+              <input id="gridColor" type="color" value="#8bb8ff" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label for="axisColor">Axis color</label>
+              <input id="axisColor" type="color" value="#111827" />
+            </div>
+            <div>
+              <label for="plotColor">Plot color</label>
+              <input id="plotColor" type="color" value="#dc2626" />
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>5. Labels</h2>
+          <div class="field">
+            <label for="graphTitle">Graph title</label>
+            <input id="graphTitle" type="text" value="Physics Lab Graph" />
+          </div>
+          <div class="grid-2">
+            <div>
+              <label for="xLabel">X-axis label</label>
+              <input id="xLabel" type="text" value="X Value" />
+            </div>
+            <div>
+              <label for="yLabel">Y-axis label</label>
+              <input id="yLabel" type="text" value="Y Value" />
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" onclick="plotGraph()">Plot Graph</button>
+          <button class="secondary" onclick="downloadGraph()">Download PNG</button>
+        </div>
+        <button class="danger" style="margin-top:10px" onclick="clearGraph()">Clear Canvas</button>
+      </aside>
+
+      <section class="graph-card">
+        <div class="graph-topbar">
+          <h2>Graph Preview</h2>
+          <span id="paperInfo">Millimeter graph paper</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="graphCanvas" width="900" height="650"></canvas>
+        </div>
+        <div id="status" class="status">Ready. Enter values and click Plot Graph.</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function getValue(id) {
+      return document.getElementById(id).value;
+    }
+
+    function getNumber(id) {
+      return Number(document.getElementById(id).value);
+    }
+
+    function setStatus(message) {
+      document.getElementById('status').textContent = message;
+    }
+
+    function parseData() {
+      const raw = getValue('dataInput').trim();
+      if (!raw) return [];
+
+      return raw.split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+          const parts = line.split(/[ ,\t]+/).map(Number);
+          return { x: parts[0], y: parts[1] };
+        })
+        .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+    }
+
+    function loadSample(type) {
+      if (type === 'linear') {
+        document.getElementById('dataInput').value = '0,0\n1,1.8\n2,4.1\n3,5.9\n4,8.2\n5,10.1';
+        document.getElementById('xMin').value = 0;
+        document.getElementById('xMax').value = 5;
+        document.getElementById('yMin').value = 0;
+        document.getElementById('yMax').value = 11;
+        document.getElementById('graphTitle').value = 'Linear Lab Plot';
+      }
+
+      if (type === 'physics') {
+        document.getElementById('dataInput').value = '1,2\n2,4\n3,8\n4,16\n5,32\n6,64\n7,128\n8,256\n9,512\n10,1000';
+        document.getElementById('xMin').value = 1;
+        document.getElementById('xMax').value = 10;
+        document.getElementById('yMin').value = 1;
+        document.getElementById('yMax').value = 1000;
+        document.getElementById('paperStyle').value = 'semilog3';
+        document.getElementById('graphTitle').value = 'Semilog Physics Plot';
+      }
+
+      plotGraph();
+    }
+
+    function autoRange(points) {
+      const xs = points.map(p => p.x);
+      const ys = points.map(p => p.y);
+      let xMin = Math.min(...xs);
+      let xMax = Math.max(...xs);
+      let yMin = Math.min(...ys);
+      let yMax = Math.max(...ys);
+
+      const xPad = (xMax - xMin || 1) * 0.08;
+      const yPad = (yMax - yMin || 1) * 0.08;
+
+      xMin -= xPad;
+      xMax += xPad;
+      yMin -= yPad;
+      yMax += yPad;
+
+      if (getValue('paperStyle').startsWith('semilog') && yMin <= 0) {
+        yMin = Math.min(...ys.filter(y => y > 0));
+      }
+
+      document.getElementById('xMin').value = Number(xMin.toFixed(3));
+      document.getElementById('xMax').value = Number(xMax.toFixed(3));
+      document.getElementById('yMin').value = Number(yMin.toFixed(3));
+      document.getElementById('yMax').value = Number(yMax.toFixed(3));
+    }
+
+    function setupCanvas() {
+      const width = Math.max(400, getNumber('paperWidth'));
+      const height = Math.max(300, getNumber('paperHeight'));
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    function clearGraph() {
+      setupCanvas();
+      ctx.fillStyle = getValue('paperColor');
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      setStatus('Canvas cleared.');
+    }
+
+    function drawText(text, x, y, options = {}) {
+      ctx.save();
+      ctx.fillStyle = options.color || getValue('axisColor');
+      ctx.font = options.font || '14px Arial';
+      ctx.textAlign = options.align || 'center';
+      ctx.textBaseline = options.baseline || 'middle';
+      if (options.rotate) {
+        ctx.translate(x, y);
+        ctx.rotate(options.rotate);
+        ctx.fillText(text, 0, 0);
+      } else {
+        ctx.fillText(text, x, y);
+      }
+      ctx.restore();
+    }
+
+    function niceStep(range, targetSteps) {
+      const raw = range / targetSteps;
+      const power = Math.pow(10, Math.floor(Math.log10(raw)));
+      const normalized = raw / power;
+      let nice;
+      if (normalized < 1.5) nice = 1;
+      else if (normalized < 3) nice = 2;
+      else if (normalized < 7) nice = 5;
+      else nice = 10;
+      return nice * power;
+    }
+
+    function plotGraph() {
+      setupCanvas();
+      const points = parseData();
+      const style = getValue('paperStyle');
+      const plotMode = getValue('plotMode');
+      const paperColor = getValue('paperColor');
+      const gridColor = getValue('gridColor');
+      const axisColor = getValue('axisColor');
+      const plotColor = getValue('plotColor');
+      const pointSize = getNumber('pointSize');
+
+      if (points.length === 0) {
+        clearGraph();
+        setStatus('Please enter valid x,y data points.');
+        return;
+      }
+
+      if (document.getElementById('autoRange').checked) {
+        autoRange(points);
+      }
+
+      let xMin = getNumber('xMin');
+      let xMax = getNumber('xMax');
+      let yMin = getNumber('yMin');
+      let yMax = getNumber('yMax');
+
+      if (xMax <= xMin || yMax <= yMin) {
+        setStatus('Invalid range. X Max must be greater than X Min, and Y Max must be greater than Y Min.');
+        return;
+      }
+
+      if (style.startsWith('semilog')) {
+        const hasInvalid = points.some(p => p.y <= 0) || yMin <= 0;
+        if (hasInvalid) {
+          setStatus('Semilog graphs need positive Y values and positive Y minimum.');
+          return;
+        }
+      }
+
+      ctx.fillStyle = paperColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const margin = {
+        left: 82,
+        right: 36,
+        top: 70,
+        bottom: 72
+      };
+
+      const plotLeft = margin.left;
+      const plotRight = canvas.width - margin.right;
+      const plotTop = margin.top;
+      const plotBottom = canvas.height - margin.bottom;
+      const plotWidth = plotRight - plotLeft;
+      const plotHeight = plotBottom - plotTop;
+
+      const logYMin = Math.log10(yMin);
+      const logYMax = Math.log10(yMax);
+
+      function xToPx(x) {
+        return plotLeft + ((x - xMin) / (xMax - xMin)) * plotWidth;
+      }
+
+      function yToPx(y) {
+        if (style.startsWith('semilog')) {
+          return plotBottom - ((Math.log10(y) - logYMin) / (logYMax - logYMin)) * plotHeight;
+        }
+        return plotBottom - ((y - yMin) / (yMax - yMin)) * plotHeight;
+      }
+
+      function drawGridLine(x1, y1, x2, y2, color, width = 1) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function drawLinearGrid() {
+        const minorPx = style === 'mm' ? 10 : 50;
+        const majorEvery = style === 'mm' ? 5 : 1;
+        const minorColor = hexToRgba(gridColor, 0.45);
+        const majorColor = hexToRgba(gridColor, 0.95);
+
+        for (let x = plotLeft; x <= plotRight + 0.1; x += minorPx) {
+          const index = Math.round((x - plotLeft) / minorPx);
+          drawGridLine(x, plotTop, x, plotBottom, index % majorEvery === 0 ? majorColor : minorColor, index % majorEvery === 0 ? 1.2 : 0.6);
+        }
+
+        for (let y = plotTop; y <= plotBottom + 0.1; y += minorPx) {
+          const index = Math.round((y - plotTop) / minorPx);
+          drawGridLine(plotLeft, y, plotRight, y, index % majorEvery === 0 ? majorColor : minorColor, index % majorEvery === 0 ? 1.2 : 0.6);
+        }
+      }
+
+      function drawSemilogGrid(cycles) {
+        const minorColor = hexToRgba(gridColor, 0.45);
+        const majorColor = hexToRgba(gridColor, 0.95);
+        const xStep = niceStep(xMax - xMin, 10);
+
+        for (let x = Math.ceil(xMin / xStep) * xStep; x <= xMax; x += xStep) {
+          const px = xToPx(x);
+          drawGridLine(px, plotTop, px, plotBottom, majorColor, 1);
+          drawText(Number(x.toFixed(3)), px, plotBottom + 18, { font: '12px Arial' });
+        }
+
+        const startPower = Math.floor(logYMin);
+        const endPower = Math.ceil(logYMax);
+        for (let p = startPower; p <= endPower; p++) {
+          for (let m = 1; m < 10; m++) {
+            const value = m * Math.pow(10, p);
+            if (value < yMin || value > yMax) continue;
+            const py = yToPx(value);
+            drawGridLine(plotLeft, py, plotRight, py, m === 1 ? majorColor : minorColor, m === 1 ? 1.3 : 0.65);
+            if (m === 1) {
+              drawText(value.toPrecision(1), plotLeft - 28, py, { font: '12px Arial', align: 'right' });
+            }
+          }
+        }
+
+        const totalCycles = Math.round(logYMax - logYMin);
+        document.getElementById('paperInfo').textContent = `Semilog graph paper - ${cycles} cycle selected, visible range about ${totalCycles} log cycle(s)`;
+      }
+
+      function drawAxisTicks() {
+        if (!style.startsWith('semilog')) {
+          const xStep = niceStep(xMax - xMin, 10);
+          const yStep = niceStep(yMax - yMin, 10);
+
+          for (let x = Math.ceil(xMin / xStep) * xStep; x <= xMax; x += xStep) {
+            const px = xToPx(x);
+            drawGridLine(px, plotBottom, px, plotBottom + 6, axisColor, 1.3);
+            drawText(Number(x.toFixed(3)), px, plotBottom + 20, { font: '12px Arial' });
+          }
+
+          for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
+            const py = yToPx(y);
+            drawGridLine(plotLeft - 6, py, plotLeft, py, axisColor, 1.3);
+            drawText(Number(y.toFixed(3)), plotLeft - 12, py, { font: '12px Arial', align: 'right' });
+          }
+        }
+      }
+
+      if (style === 'semilog3') drawSemilogGrid(3);
+      else if (style === 'semilog5') drawSemilogGrid(5);
+      else {
+        drawLinearGrid();
+        document.getElementById('paperInfo').textContent = style === 'mm' ? 'Millimeter graph paper' : 'Plain graph';
+      }
+
+      drawAxisTicks();
+
+      ctx.strokeStyle = axisColor;
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(plotLeft, plotTop, plotWidth, plotHeight);
+
+      drawText(getValue('graphTitle'), canvas.width / 2, 32, {
+        font: 'bold 22px Arial',
+        color: axisColor
+      });
+      drawText(getValue('xLabel'), plotLeft + plotWidth / 2, canvas.height - 28, {
+        font: 'bold 15px Arial',
+        color: axisColor
+      });
+      drawText(getValue('yLabel'), 24, plotTop + plotHeight / 2, {
+        font: 'bold 15px Arial',
+        color: axisColor,
+        rotate: -Math.PI / 2
+      });
+
+      const validVisiblePoints = points
+        .filter(p => p.x >= xMin && p.x <= xMax)
+        .filter(p => style.startsWith('semilog') ? p.y > 0 && p.y >= yMin && p.y <= yMax : p.y >= yMin && p.y <= yMax)
+        .map(p => ({ ...p, px: xToPx(p.x), py: yToPx(p.y) }));
+
+      if ((plotMode === 'pointsLine' || plotMode === 'line') && validVisiblePoints.length > 1) {
+        ctx.beginPath();
+        ctx.strokeStyle = plotColor;
+        ctx.lineWidth = 2.5;
+        validVisiblePoints.forEach((p, index) => {
+          if (index === 0) ctx.moveTo(p.px, p.py);
+          else ctx.lineTo(p.px, p.py);
+        });
+        ctx.stroke();
+      }
+
+      if (plotMode === 'pointsLine' || plotMode === 'points') {
+        validVisiblePoints.forEach(p => {
+          ctx.beginPath();
+          ctx.fillStyle = plotColor;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.6;
+          ctx.arc(p.px, p.py, pointSize, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+      }
+
+      setStatus(`Plotted ${validVisiblePoints.length} visible point(s) out of ${points.length}. Use Download PNG to save the graph.`);
+    }
+
+    function downloadGraph() {
+      plotGraph();
+      const link = document.createElement('a');
+      const title = getValue('graphTitle').trim().replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'graph';
+      link.download = `${title}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    document.querySelectorAll('input, select, textarea').forEach(element => {
+      element.addEventListener('change', plotGraph);
+    });
+
+    plotGraph();
+  </script>
+</body>
+</html>
